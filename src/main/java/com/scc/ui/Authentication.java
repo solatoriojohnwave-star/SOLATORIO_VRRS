@@ -6,10 +6,15 @@ import com.scc.model.User;
 import java.util.Optional;
 import java.util.Scanner;
 
-public class MainMenu {
+public class Authentication {
 
-    private final Scanner scanner = new Scanner(System.in);
-    private final UserDao userDao = new UserDao();
+    private final Scanner scanner;
+    private final UserDao userDao;
+
+    public Authentication(Scanner scanner, UserDao userDao) {
+        this.scanner = scanner;
+        this.userDao = userDao;
+    }
 
     public void start() {
         boolean running = true;
@@ -84,9 +89,20 @@ public class MainMenu {
 
         Optional<User> result = userDao.login(username, password);
         if (result.isPresent()) {
-            new UserMenu(scanner, result.get()).show();
+            routeByRole(result.get());
         } else {
             System.out.println("Invalid username or password.");
+        }
+    }
+
+    // Role-based routing: sends the user straight to their own menu.
+    private void routeByRole(User user) {
+        System.out.println("\nLogin successful! Welcome, " + user.username() + ".");
+        switch (user.roles()) {
+            case "ADMIN"         -> new AdminMenu(scanner, userDao, user).show();
+            case "RECEPTIONISTS" -> new ReceptionistMenu(scanner, userDao, user).show();
+            case "CUSTOMER"      -> new CustomerMenu(scanner, userDao, user).show();
+            default -> System.out.println("Unknown role: " + user.roles() + ". Access denied.");
         }
     }
 }

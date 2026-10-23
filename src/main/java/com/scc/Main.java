@@ -1,11 +1,23 @@
 package com.scc;
 
-import com.scc.dao.DatabaseConnection;
-import com.scc.ui.MainMenu;
+import com.scc.dao.DatabaseInitializer;
+import com.scc.dao.UserDao;
+import com.scc.ui.Authentication;
+
+import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) {
-        DatabaseConnection.initialize();
-        new MainMenu().start();
+        // 1. Initialize database
+        DatabaseInitializer.initialize();
+
+        // 2. Instantiate shared DAOs & utilities
+        UserDao userDao = new UserDao();
+        Scanner scanner = new Scanner(System.in);
+
+        // 3. Delegate to Authentication
+        new Authentication(scanner, userDao).start();
+
+        scanner.close();
     }
 }

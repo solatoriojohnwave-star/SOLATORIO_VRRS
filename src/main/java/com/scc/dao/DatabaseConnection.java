@@ -9,25 +9,12 @@ public class DatabaseConnection {
 
     private static final String URL = "jdbc:sqlite:VIDEOKERESERVATION.db";
 
+    // Every connection enables foreign key enforcement (SQLite has it OFF by default).
     public static Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(URL);
-    }
-
-    public static void initialize() {
-        String sql = """
-                CREATE TABLE IF NOT EXISTS users (
-                    id       INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username TEXT NOT NULL UNIQUE,
-                    password TEXT NOT NULL,
-                    roles    TEXT NOT NULL,
-                    status   TEXT NOT NULL DEFAULT 'PENDING'
-                )
-                """;
-        try (Connection conn = getConnection();
-             Statement stmt = conn.createStatement()) {
-            stmt.execute(sql);
-        } catch (SQLException e) {
-            System.out.println("Database setup failed: " + e.getMessage());
+        Connection conn = DriverManager.getConnection(URL);
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute("PRAGMA foreign_keys = ON;");
         }
+        return conn;
     }
 }
