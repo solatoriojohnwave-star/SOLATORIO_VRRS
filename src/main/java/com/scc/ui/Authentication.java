@@ -63,6 +63,7 @@ public class Authentication {
 
         if (userDao.register(username, password, role)) {
             System.out.println("Account registered! Role: " + role + " | Status: PENDING");
+            System.out.println("Please wait for an admin to approve your account.");
         }
     }
 
@@ -88,11 +89,18 @@ public class Authentication {
         String password = scanner.nextLine().trim();
 
         Optional<User> result = userDao.login(username, password);
-        if (result.isPresent()) {
-            routeByRole(result.get());
-        } else {
+        if (result.isEmpty()) {
             System.out.println("Invalid username or password.");
+            return;
         }
+
+        User user = result.get();
+        if (!user.status().equals("APPROVED")) {
+            System.out.println("Your account is still " + user.status()
+                    + ". Please wait for an admin to approve it.");
+            return;
+        }
+        routeByRole(user);
     }
 
     // Role-based routing: sends the user straight to their own menu.

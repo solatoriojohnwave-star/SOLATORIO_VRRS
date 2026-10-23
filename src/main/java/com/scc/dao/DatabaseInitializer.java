@@ -1,6 +1,7 @@
 package com.scc.dao;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
 
@@ -74,9 +75,23 @@ public class DatabaseInitializer {
             for (String sql : tables) {
                 stmt.execute(sql);
             }
+            seedDefaultAdmin(conn);
             System.out.println("Database initialized successfully.");
         } catch (SQLException e) {
             System.out.println("Database setup failed: " + e.getMessage());
+        }
+    }
+
+    // Creates the default admin once. INSERT OR IGNORE skips it if 'admin' already
+    // exists (username is UNIQUE), so it is safe to run on every startup.
+    private static void seedDefaultAdmin(Connection conn) throws SQLException {
+        String sql = "INSERT OR IGNORE INTO users (username, password, roles, status) VALUES (?, ?, ?, ?)";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, "admin");
+            ps.setString(2, "admin123");
+            ps.setString(3, "ADMIN");
+            ps.setString(4, "APPROVED");
+            ps.executeUpdate();
         }
     }
 }
