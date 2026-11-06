@@ -60,7 +60,7 @@ public class UserDao {
         return Optional.empty();
     }
 
-    // NEW: all registered accounts, regardless of role or status
+    // All registered accounts, regardless of role or status
     public List<User> getAllUsers() {
         String sql = "SELECT id, username, password, roles, status FROM users ORDER BY id";
         List<User> users = new ArrayList<>();
@@ -76,7 +76,7 @@ public class UserDao {
         return users;
     }
 
-    // NEW: accounts awaiting approval, across all roles
+    // Accounts awaiting approval, across all roles
     public List<User> getPendingUsers() {
         String sql = "SELECT id, username, password, roles, status FROM users WHERE status = ? ORDER BY id";
         List<User> users = new ArrayList<>();
@@ -94,7 +94,7 @@ public class UserDao {
         return users;
     }
 
-    // NEW: PENDING -> APPROVED
+    // PENDING -> APPROVED
     public boolean approveUser(int userId) {
         String sql = "UPDATE users SET status = 'APPROVED' WHERE id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -103,6 +103,21 @@ public class UserDao {
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             System.out.println("Approve failed: " + e.getMessage());
+            return false;
+        }
+    }
+
+    // NEW: updates role and status of a user (inputs are converted to UPPERCASE first)
+    public boolean updateUserRoleAndStatus(int userId, String newRole, String newStatus) {
+        String sql = "UPDATE users SET roles = ?, status = ? WHERE id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, newRole.toUpperCase());
+            ps.setString(2, newStatus.toUpperCase());
+            ps.setInt(3, userId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.out.println("Update failed: " + e.getMessage());
             return false;
         }
     }
