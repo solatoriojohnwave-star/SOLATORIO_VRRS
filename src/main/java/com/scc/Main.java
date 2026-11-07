@@ -8,14 +8,11 @@ import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) {
-        // 1. Initialize database
         DatabaseInitializer.initialize();
 
-        // 2. Instantiate shared DAOs & utilities
         UserDao userDao = new UserDao();
         Scanner scanner = new Scanner(System.in);
 
-        // 3. Delegate to Authentication
         new Authentication(scanner, userDao).start();
 
         scanner.close();

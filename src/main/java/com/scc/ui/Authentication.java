@@ -1,5 +1,6 @@
 package com.scc.ui;
 
+import com.scc.dao.ActivityLogDao;
 import com.scc.dao.UserDao;
 import com.scc.model.User;
 
@@ -10,10 +11,12 @@ public class Authentication {
 
     private final Scanner scanner;
     private final UserDao userDao;
+    private final ActivityLogDao logDao;
 
     public Authentication(Scanner scanner, UserDao userDao) {
         this.scanner = scanner;
         this.userDao = userDao;
+        this.logDao = new ActivityLogDao();
     }
 
     public void start() {
@@ -95,15 +98,20 @@ public class Authentication {
         }
 
         User user = result.get();
-        if (!user.status().equals("APPROVED")) {
-            System.out.println("Your account is still " + user.status()
-                    + ". Please wait for an admin to approve it.");
+
+        // STRICT PENDING CHECK: Deny login if status is not APPROVED
+        if (!user.status().equalsIgnoreCase("APPROVED")) {
+            System.out.println("Login Denied: Your account status is [" + user.status() + "]. Pending accounts cannot log in until approved by an admin.");
             return;
         }
+
+        logDao.logAction(user.id(), "USER_LOGIN", "User " + user.username() + " (ID: " + user.id() + ") logged in.");
+
         routeByRole(user);
+
+        logDao.logAction(user.id(), "USER_LOGOUT", "User " + user.username() + " (ID: " + user.id() + ") logged out.");
     }
 
-    // Role-based routing: sends the user straight to their own menu.
     private void routeByRole(User user) {
         System.out.println("\nLogin successful! Welcome, " + user.username() + ".");
         switch (user.roles()) {

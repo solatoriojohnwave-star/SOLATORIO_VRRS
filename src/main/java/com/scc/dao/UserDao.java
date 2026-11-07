@@ -12,6 +12,8 @@ import java.util.Optional;
 
 public class UserDao {
 
+    private final ActivityLogDao logDao = new ActivityLogDao();
+
     public boolean register(String username, String password, String roles) {
         String sql = "INSERT INTO users (username, password, roles, status) VALUES (?, ?, ?, 'PENDING')";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -41,8 +43,6 @@ public class UserDao {
         }
     }
 
-    // Checks username and password only. Status is NOT checked,
-    // so PENDING accounts can log in too.
     public Optional<User> login(String username, String password) {
         String sql = "SELECT id, username, password, roles, status FROM users WHERE username = ? AND password = ?";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -60,7 +60,6 @@ public class UserDao {
         return Optional.empty();
     }
 
-    // All registered accounts, regardless of role or status
     public List<User> getAllUsers() {
         String sql = "SELECT id, username, password, roles, status FROM users ORDER BY id";
         List<User> users = new ArrayList<>();
@@ -76,7 +75,6 @@ public class UserDao {
         return users;
     }
 
-    // Accounts awaiting approval, across all roles
     public List<User> getPendingUsers() {
         String sql = "SELECT id, username, password, roles, status FROM users WHERE status = ? ORDER BY id";
         List<User> users = new ArrayList<>();
@@ -94,35 +92,40 @@ public class UserDao {
         return users;
     }
 
-    // PENDING -> APPROVED
-    public boolean approveUser(int userId) {
+    public boolean approveUser(int adminId, int targetUserId, String targetUsername) {
         String sql = "UPDATE users SET status = 'APPROVED' WHERE id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, userId);
-            return ps.executeUpdate() > 0;
+            ps.setInt(1, targetUserId);
+            int rows = ps.executeUpdate();
+            if (rows > 0) {
+                logDao.logAction(adminId, "USER_APPROVED", "Admin [" + adminId + "] approved account for User ID " + targetUserId + " (" + targetUsername + ")");
+                return true;
+            }
         } catch (SQLException e) {
             System.out.println("Approve failed: " + e.getMessage());
-            return false;
         }
+        return false;
     }
 
-    // NEW: updates role and status of a user (inputs are converted to UPPERCASE first)
-    public boolean updateUserRoleAndStatus(int userId, String newRole, String newStatus) {
+    public boolean updateUserRoleAndStatus(int adminId, int targetUserId, String newRole, String newStatus) {
         String sql = "UPDATE users SET roles = ?, status = ? WHERE id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, newRole.toUpperCase());
             ps.setString(2, newStatus.toUpperCase());
-            ps.setInt(3, userId);
-            return ps.executeUpdate() > 0;
+            ps.setInt(3, targetUserId);
+            int rows = ps.executeUpdate();
+            if (rows > 0) {
+                logDao.logAction(adminId, "USER_UPDATED", "Role changed to " + newRole.toUpperCase() + " and status to " + newStatus.toUpperCase() + " for User ID " + targetUserId);
+                return true;
+            }
         } catch (SQLException e) {
             System.out.println("Update failed: " + e.getMessage());
-            return false;
         }
+        return false;
     }
 
-    // Helper so every query builds a User the same way
     private User mapUser(ResultSet rs) throws SQLException {
         return new User(
                 rs.getInt("id"),
